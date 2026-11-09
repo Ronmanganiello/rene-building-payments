@@ -159,7 +159,7 @@ tr.editing input,tr.editing select{width:100%}
     <h1>Cafe Building Payments</h1>
     <p class="muted" style="margin:0">Enter your password. Ron and Ellen use the editing password; Rene uses the viewing password.</p>
     <form id="loginForm" class="row" autocomplete="on">
-      <input type="text" name="username" value="cafe-building" autocomplete="username" hidden>
+      <input type="text" name="username" id="un" autocomplete="username" hidden>
       <input type="password" id="pw" name="password" autocomplete="current-password" placeholder="Password" aria-label="Password" required style="flex:1;min-width:180px">
       <button class="primary" type="submit">Sign in</button>
     </form>
@@ -336,7 +336,10 @@ function showLogin(){$("#app").hidden=true;$("#loginPanel").hidden=false;setTime
 /* ---------- events ---------- */
 $("#loginForm").addEventListener("submit",async e=>{e.preventDefault();const msg=$("#loginMsg");msg.textContent="Checking…";
   const r=await fetch("/api/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({password:$("#pw").value})}).catch(()=>null);
-  if(r&&r.ok){msg.textContent="";$("#pw").value="";load()}else msg.textContent=r&&r.status===401?"That password isn't right.":"Couldn't reach the site. Try again."});
+  if(r&&r.ok){const pw=$("#pw").value;const who=(await r.json().catch(()=>({}))).role;msg.textContent="";
+    // Ask Chrome to offer "Save password?" (the page never reloads, so it may not notice the sign-in by itself)
+    try{if(window.PasswordCredential)navigator.credentials.store(new PasswordCredential({id:who==="viewer"?"cafe-building-view":"cafe-building-edit",password:pw,name:who==="viewer"?"Cafe Building (view only)":"Cafe Building (editing)"})).catch(()=>{})}catch(_){}
+    $("#pw").value="";load()}else msg.textContent=r&&r.status===401?"That password isn't right.":"Couldn't reach the site. Try again."});
 $("#logout").addEventListener("click",async()=>{await fetch("/api/logout",{method:"POST"}).catch(()=>{});role=null;E=[];showLogin()});
 $("#aDate").value=todayISO();
 $("#aKind").addEventListener("change",e=>{$("#aBtn").textContent=e.target.value==="credit"?"Add bonus credit":"Add payment"});
