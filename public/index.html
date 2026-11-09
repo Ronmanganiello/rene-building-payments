@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#4F6655">
+<title>Cafe Building Payments</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column ledger. Balance first, then the 12-month bonus run, then the payment history. Colors from Oaxaca's green cantera stone and cempasúchil marigold. */
+:root{
+  --paper:#F3F5F2; --card:#FFFFFF; --ink:#1E2622; --muted:#5E6B63; --line:#D9E0DA; --soft:#E9EEEA;
+  --cantera:#4F6655; --cantera-ink:#FFFFFF; --cantera-soft:#DCE6DE;
+  --marigold:#C9821B; --marigold-soft:#F8E7C8; --bad:#B4432F; --bad-soft:#F6DFD9;
+  --f-display:"Young Serif", Georgia, "Times New Roman", serif;
+  --f-body:"Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-num:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#121714; --card:#19201C; --ink:#E4EBE6; --muted:#97A59C; --line:#2B3530; --soft:#202925;
+  --cantera:#8DB098; --cantera-ink:#0E1411; --cantera-soft:#24332A;
+  --marigold:#EDB04F; --marigold-soft:#3A2D16; --bad:#EE8B78; --bad-soft:#3B211C; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#121714; --card:#19201C; --ink:#E4EBE6; --muted:#97A59C; --line:#2B3530; --soft:#202925;
+  --cantera:#8DB098; --cantera-ink:#0E1411; --cantera-soft:#24332A;
+  --marigold:#EDB04F; --marigold-soft:#3A2D16; --bad:#EE8B78; --bad-soft:#3B211C; color-scheme:dark}
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+[hidden]{display:none!important}
+.wrap{max-width:980px;margin:0 auto;padding-block:22px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+h1,h2{font-family:var(--f-display);font-weight:400;margin:0;text-wrap:balance}
+h1{font-size:1.75rem;letter-spacing:-.01em} h2{font-size:1.25rem}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spread{justify-content:space-between}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:8px 14px;font-weight:600}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--cantera);border-color:var(--cantera);color:var(--cantera-ink)}
+button.gold{background:var(--marigold);border-color:var(--marigold);color:#1E1608}
+button.link{border:none;background:none;padding:2px 4px;color:var(--cantera);font-weight:600}
+button.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+button:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--cantera);outline-offset:2px}
+input,select{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+input[type=number]{font-family:var(--f-num)}
+.pill{display:inline-block;font-size:.74rem;font-weight:700;padding:2px 10px;border-radius:999px;letter-spacing:.02em;white-space:nowrap}
+.pill.view{background:var(--soft);color:var(--muted)} .pill.edit{background:var(--cantera-soft);color:var(--cantera)}
+.pill.credit{background:var(--marigold-soft);color:var(--marigold)}
+#status{font-size:.88rem;padding:10px 14px;border-radius:10px;background:var(--soft);color:var(--muted)}
+#status.warn{background:var(--bad-soft);color:var(--bad)}
+
+header.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+header.top .sub{color:var(--muted);margin-top:4px}
+
+/* balance */
+.hero{display:grid;grid-template-columns:1.2fr 1fr;gap:24px;align-items:center}
+@media (max-width:720px){.hero{grid-template-columns:1fr}}
+.big{font-family:var(--f-num);font-size:clamp(2.2rem,6vw,3.2rem);font-weight:500;letter-spacing:-.02em;line-height:1.05}
+.cur{font-family:var(--f-body);font-size:.9rem;color:var(--muted);font-weight:600;margin-left:6px;letter-spacing:.04em}
+.bar{display:flex;height:14px;border-radius:999px;overflow:hidden;background:var(--soft);margin:14px 0 8px}
+.bar span{display:block;height:100%}
+.bar .cash{background:var(--cantera)} .bar .bonus{background:var(--marigold)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--soft);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .v{font-family:var(--f-num);font-size:1.05rem}
+.stat.gold{background:var(--marigold-soft)} .stat.gold .label{color:var(--marigold)}
+
+/* bonus run */
+.slots{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;margin:14px 0 10px}
+@media (max-width:720px){.slots{grid-template-columns:repeat(6,1fr)}.slot{font-size:.72rem}}
+.slot{border:1.5px dashed var(--line);border-radius:10px;padding:8px 2px;text-align:center;min-height:62px;display:flex;flex-direction:column;justify-content:center;gap:2px;font-size:.78rem}
+.slot .m{font-weight:700;letter-spacing:.02em}
+.slot .a{font-family:var(--f-num);font-size:.72rem;color:var(--muted)}
+.slot.ok{border:1.5px solid var(--cantera);background:var(--cantera-soft)} .slot.ok .m{color:var(--cantera)}
+.slot.now{border:1.5px solid var(--marigold);background:var(--marigold-soft)} .slot.now .m{color:var(--marigold)}
+.slot.next{color:var(--muted)}
+.runline{font-size:1.05rem}
+.runline b{font-family:var(--f-num);font-weight:500}
+.earned{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:var(--marigold-soft);border:1px solid color-mix(in srgb,var(--marigold) 45%,transparent);border-radius:12px;padding:14px 16px;margin-top:12px}
+.earned .amt{font-family:var(--f-num);font-size:1.4rem;color:var(--marigold)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chip{font-size:.78rem;padding:3px 9px;border-radius:999px;background:var(--soft);color:var(--muted);white-space:nowrap}
+.chip.ok{background:var(--cantera-soft);color:var(--cantera)} .chip.bad{background:var(--bad-soft);color:var(--bad)} .chip.now{background:var(--marigold-soft);color:var(--marigold)}
+.rule{font-size:.85rem;color:var(--muted);margin-top:10px;max-width:70ch}
+
+/* forms */
+.addform{display:grid;grid-template-columns:150px 150px 170px 1fr auto;gap:8px;align-items:end}
+.addform label{display:flex;flex-direction:column;gap:4px;font-size:.78rem;color:var(--muted);font-weight:600}
+@media (max-width:760px){.addform{grid-template-columns:1fr 1fr}.addform .wide{grid-column:1/-1}.addform button{grid-column:1/-1}}
+
+/* history */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin-top:12px}
+table{border-collapse:collapse;width:100%;min-width:640px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;background:var(--soft)}
+td.r,th.r{text-align:right} td.num{white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr.yr td{background:var(--paper);font-weight:700;font-size:.85rem;color:var(--muted);padding:6px 12px}
+tr.credit td.amt{color:var(--marigold)}
+td.note{font-size:.88rem;color:var(--muted);max-width:260px}
+tr.editing td{background:var(--soft)}
+tr.editing input,tr.editing select{width:100%}
+.login{max-width:440px;margin:12vh auto 0;display:flex;flex-direction:column;gap:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="panel login" id="loginPanel" hidden>
+    <h1>Cafe Building Payments</h1>
+    <p class="muted" style="margin:0">Enter your password. Ron and Ellen use the editing password; Rene uses the viewing password.</p>
+    <form id="loginForm" class="row" autocomplete="on">
+      <input type="text" name="username" value="cafe-building" autocomplete="username" hidden>
+      <input type="password" id="pw" name="password" autocomplete="current-password" placeholder="Password" aria-label="Password" required style="flex:1;min-width:180px">
+      <button class="primary" type="submit">Sign in</button>
+    </form>
+    <div id="loginMsg" class="muted" role="status" style="min-height:1.4em"></div>
+  </section>
+
+  <div id="app" hidden style="display:contents">
+    <header class="top">
+      <div>
+        <h1 id="title">Cafe Building · Rene's payments</h1>
+        <div class="sub" id="subtitle">Sold to Rene at 0% interest · amounts in Mexican pesos</div>
+      </div>
+      <div class="row"><span id="rolePill"></span><button class="link" id="logout">Sign out</button></div>
+    </header>
+
+    <div id="status" hidden></div>
+
+    <section class="panel">
+      <div class="hero">
+        <div>
+          <div class="label">Remaining balance</div>
+          <div class="big" id="balance">—</div>
+          <div class="bar" role="img" id="bar" aria-label="Share of the price paid"><span class="cash" id="barCash"></span><span class="bonus" id="barBonus"></span></div>
+          <div class="legend"><span><i style="background:var(--cantera)"></i>Payments</span><span><i style="background:var(--marigold)"></i>Bonus credits</span><span><i style="background:var(--soft);border:1px solid var(--line)"></i>Still owed</span></div>
+        </div>
+        <div class="stats">
+          <div class="stat"><span class="label">Sale price</span><span class="v" id="sPrice">—</span></div>
+          <div class="stat"><span class="label">Paid so far</span><span class="v" id="sPaid">—</span></div>
+          <div class="stat gold"><span class="label">Bonus credits</span><span class="v" id="sBonus">—</span></div>
+          <div class="stat"><span class="label">Last payment</span><span class="v" id="sLast">—</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="bonusPanel">
+      <div class="row spread"><h2>12-month bonus</h2><span class="muted" id="runSince"></span></div>
+      <div class="runline" id="runLine" style="margin-top:8px"></div>
+      <div class="slots" id="slots"></div>
+      <div id="earned"></div>
+      <div class="label" style="margin-top:14px">Months since the last bonus</div>
+      <div class="chips" id="monthChips"></div>
+      <p class="rule" id="ruleText"></p>
+    </section>
+
+    <section class="panel" id="addPanel" hidden>
+      <h2 style="margin-bottom:12px">Record a payment</h2>
+      <form class="addform" id="addForm">
+        <label>Date<input type="date" id="aDate" required></label>
+        <label>Amount (MXN)<input type="number" id="aAmt" min="0" step="0.01" placeholder="20000" required></label>
+        <label>Type<select id="aKind"><option value="payment">Payment from Rene</option><option value="credit">Bonus credit</option></select></label>
+        <label class="wide">Note (optional)<input type="text" id="aNote" maxlength="500" placeholder="e.g. paid in two parts"></label>
+        <button class="primary" type="submit" id="aBtn">Add</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="row spread"><h2>Payment history</h2><span class="muted" id="histCount"></span></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Date</th><th>Type</th><th class="r">Amount</th><th class="r">Total paid</th><th class="r">Balance</th><th>Note</th><th class="ed" hidden></th></tr></thead>
+        <tbody id="hist"></tbody>
+      </table></div>
+      <div style="margin-top:10px"><button class="link" id="showAll" hidden></button></div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const MON=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const MS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const money=n=>{const v=Math.round(n*100)/100;const whole=Math.abs(v%1)<0.005;return (v<0?"−":"")+"$"+Math.abs(v).toLocaleString("en-US",{minimumFractionDigits:whole?0:2,maximumFractionDigits:2})};
+const ym=d=>d.slice(0,7);
+const mLabel=k=>MON[+k.slice(5)-1]+" "+k.slice(0,4);
+const mShort=k=>MS[+k.slice(5)-1]+" "+k.slice(2,4);
+const dLabel=d=>`${MS[+d.slice(5,7)-1]} ${+d.slice(8)}, ${d.slice(0,4)}`;
+function addM(k,n){let[y,m]=k.split("-").map(Number);m+=n;while(m>12){m-=12;y++}while(m<1){m+=12;y--}return `${y}-${String(m).padStart(2,"0")}`}
+function todayISO(){const t=new Date();return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`}
+
+let role=null,S={},E=[],showAll=false,editId=null,confirmDel=null;
+function setStatus(t,warn){const s=$("#status");s.textContent=t||"";s.className=warn?"warn":"";s.hidden=!t}
+
+/* ---------- the bonus rule ----------
+   A calendar month counts when Rene's payments dated in it add up to at least the minimum.
+   The run starts in the month of the last bonus credit (that month is month 1 of the next run).
+   A past month below the minimum restarts the run; the current month can still be paid.
+   After 12 counting months in a row, the bonus is 1/12 of those 12 months' payments, credited in month 13. */
+function bonusState(){
+  const min=+S.bonusMinimum||20000,start0=S.bonusStart||"2023-06",nowK=ym(todayISO());
+  const credits=E.filter(e=>e.kind==="credit"&&ym(e.date)>=start0);
+  const last=credits[credits.length-1]||null;const start=last?ym(last.date):start0;
+  const tot={};for(const e of E)if(e.kind==="payment")tot[ym(e.date)]=(tot[ym(e.date)]||0)+e.amount;
+  const months=[];let run=[],earned=null;
+  for(let k=start;k<=nowK;k=addM(k,1)){const t=tot[k]||0,ok=t>=min,cur=k===nowK;
+    let st=ok?"ok":cur?"now":"bad";months.push({k,t,st});
+    if(earned)continue;
+    if(ok){run.push({k,t});if(run.length===12){const sum=run.reduce((s,x)=>s+x.t,0);earned={run:run.slice(),sum,amount:Math.round(sum/12),due:addM(k,1)}}}
+    else if(!cur)run=[]}
+  return{min,start,last,months,run,earned,nowK,curTotal:tot[nowK]||0}}
+
+function totals(){let cash=0,bonus=0;for(const e of E){if(e.kind==="credit")bonus+=e.amount;else cash+=e.amount}
+  const price=+S.price||0;return{price,cash,bonus,paid:cash+bonus,bal:price-cash-bonus}}
+
+/* ---------- render ---------- */
+function render(){
+  const T=totals(),B=bonusState(),ed=role==="editor";
+  $("#title").textContent=`${S.property||"Cafe Building"} · Rene's payments`;
+  $("#rolePill").innerHTML=ed?`<span class="pill edit">Editing</span>`:`<span class="pill view">View only</span>`;
+  $("#addPanel").hidden=!ed;document.querySelectorAll("th.ed").forEach(t=>t.hidden=!ed);
+  $("#balance").innerHTML=`${money(T.bal)}<span class="cur">MXN</span>`;
+  const pc=T.price?T.cash/T.price*100:0,pb=T.price?T.bonus/T.price*100:0;
+  $("#barCash").style.width=pc+"%";$("#barBonus").style.width=pb+"%";
+  $("#bar").setAttribute("aria-label",`${Math.round(pc+pb)}% of the price paid`);
+  $("#sPrice").textContent=money(T.price);
+  $("#sPaid").innerHTML=`${money(T.paid)} <span class="muted" style="font-size:.8rem">· ${Math.round((pc+pb)*10)/10}%</span>`;
+  $("#sBonus").textContent=money(T.bonus);
+  const lastPay=[...E].reverse().find(e=>e.kind==="payment");
+  $("#sLast").innerHTML=lastPay?`${money(lastPay.amount)} <span class="muted" style="font-size:.8rem">· ${dLabel(lastPay.date)}</span>`:"—";
+  renderBonus(B,ed);renderHist(ed)}
+
+function renderBonus(B,ed){
+  const n=B.earned?12:B.run.length;
+  $("#runSince").textContent=B.last?`Since the last bonus, ${dLabel(B.last.date)}`:`Since ${mLabel(B.start)}`;
+  const need=Math.max(0,B.min-B.curTotal);
+  $("#runLine").innerHTML=B.earned?`<b>12 of 12</b> months in a row. A bonus has been earned.`:
+    `<b>${n} of 12</b> months in a row at ${money(B.min)} or more.`+
+    (B.curTotal>=B.min?` ${MON[+B.nowK.slice(5)-1]} already counts.`:` ${MON[+B.nowK.slice(5)-1]} needs ${money(need)} more${B.curTotal?` (${money(B.curTotal)} paid so far)`:""}.`);
+  // 12 slots: the counting months, then this month, then the months still to come
+  const slots=[];const run=B.earned?B.earned.run:B.run;
+  for(const x of run)slots.push(`<div class="slot ok"><span class="m">${mShort(x.k)}</span><span class="a">${money(x.t)}</span></div>`);
+  if(!B.earned){let k=B.nowK;if(B.curTotal<B.min&&slots.length<12){slots.push(`<div class="slot now"><span class="m">${mShort(k)}</span><span class="a">${B.curTotal?money(B.curTotal):"due"}</span></div>`)}
+    while(slots.length<12){k=addM(k,1);slots.push(`<div class="slot next"><span class="m">${mShort(k)}</span><span class="a">&nbsp;</span></div>`)}}
+  $("#slots").innerHTML=slots.join("");
+  $("#earned").innerHTML=B.earned?`<div class="earned"><div><div class="label" style="color:var(--marigold)">Bonus earned</div><div class="amt">${money(B.earned.amount)}</div>
+    <div class="muted" style="font-size:.85rem">1/12 of ${money(B.earned.sum)} paid ${mLabel(B.earned.run[0].k)} to ${mLabel(B.earned.run[11].k)}. Credited in ${mLabel(B.earned.due)}.</div></div>
+    ${ed?`<button class="gold" id="addBonus" style="margin-left:auto">Add ${money(B.earned.amount)} bonus credit</button>`:""}</div>`:"";
+  $("#monthChips").innerHTML=B.months.map(m=>`<span class="chip ${m.st}" title="${esc(mLabel(m.k))}: ${money(m.t)}">${mShort(m.k)} · ${m.t?money(m.t):"$0"}${m.st==="bad"?" · restarted":m.st==="now"?" · this month":""}</span>`).join("")||`<span class="muted">No months yet.</span>`;
+  $("#ruleText").textContent=`The rule: each calendar month in which Rene's payments add up to ${money(B.min)} or more counts. After 12 counting months in a row, the 13th month gets a bonus credit of 1/12 of those 12 months' payments, and that month starts the next run. A month below ${money(B.min)} starts the count over.`}
+
+function renderHist(ed){
+  let run=0;const rows=E.map(e=>{run+=e.amount;return{...e,total:run,bal:(+S.price||0)-run}}).reverse();
+  const list=showAll?rows:rows.slice(0,24);let yr=null,html="";
+  for(const e of list){const y=e.date.slice(0,4);if(y!==yr){yr=y;html+=`<tr class="yr"><td colspan="${ed?7:6}">${y}</td></tr>`}
+    if(ed&&editId===e.id){html+=`<tr class="editing"><td><input type="date" id="eDate" value="${e.date}" aria-label="Date"></td>
+      <td><select id="eKind" aria-label="Type"><option value="payment" ${e.kind==="payment"?"selected":""}>Payment</option><option value="credit" ${e.kind==="credit"?"selected":""}>Bonus credit</option></select></td>
+      <td class="r"><input type="number" id="eAmt" min="0" step="0.01" value="${e.amount}" aria-label="Amount" style="text-align:right;max-width:130px"></td>
+      <td colspan="2"><input type="text" id="eNote" maxlength="500" value="${esc(e.note)}" placeholder="Note" aria-label="Note"></td>
+      <td colspan="2" style="white-space:nowrap">${confirmDel===e.id?`<span class="muted" style="font-size:.85rem">Delete it?</span> <button class="danger" data-delyes="${e.id}">Delete</button> <button data-delno="1">Keep</button>`:
+        `<button class="primary" data-save="${e.id}">Save</button> <button data-cancel="1">Cancel</button> <button class="link" style="color:var(--bad)" data-del="${e.id}">Delete</button>`}</td></tr>`;continue}
+    html+=`<tr class="${e.kind}"><td class="num">${dLabel(e.date)}</td><td>${e.kind==="credit"?`<span class="pill credit">Bonus credit</span>`:"Payment"}</td>
+      <td class="r num amt">${money(e.amount)}</td><td class="r num">${money(e.total)}</td><td class="r num">${money(e.bal)}</td>
+      <td class="note">${esc(e.note)}</td>${ed?`<td class="r"><button class="link" data-edit="${e.id}">Edit</button></td>`:""}</tr>`}
+  $("#hist").innerHTML=html||`<tr><td colspan="7" class="muted" style="text-align:center;padding:24px">No payments recorded yet.</td></tr>`;
+  $("#histCount").textContent=`${E.filter(e=>e.kind==="payment").length} payments · ${E.filter(e=>e.kind==="credit").length} bonus credits`;
+  const sa=$("#showAll");sa.hidden=rows.length<=24;sa.textContent=showAll?"Show the latest 24 only":`Show all ${rows.length} entries`}
+
+/* ---------- data ---------- */
+async function load(){
+  try{const r=await fetch("/api/data",{credentials:"same-origin",cache:"no-store"});
+    if(r.status===401)return showLogin();if(!r.ok)throw 0;
+    const d=await r.json();role=d.role;S=d.settings||{};E=d.entries||[];
+    $("#loginPanel").hidden=true;$("#app").hidden=false;setStatus("");render()}
+  catch(e){setStatus("Couldn't load the payments. Check your connection and reload the page.",true)}}
+async function send(body){const r=await fetch("/api/data",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+  if(r.status===401){showLogin();throw new Error("Please sign in again.")}
+  if(r.status===403)throw new Error("This sign-in is view only.");
+  if(!r.ok){let m="Couldn't save that.";try{m=(await r.json()).error||m}catch(_){}throw new Error(m)}
+  return r.json()}
+function showLogin(){$("#app").hidden=true;$("#loginPanel").hidden=false;setTimeout(()=>$("#pw").focus(),0)}
+
+/* ---------- events ---------- */
+$("#loginForm").addEventListener("submit",async e=>{e.preventDefault();const msg=$("#loginMsg");msg.textContent="Checking…";
+  const r=await fetch("/api/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({password:$("#pw").value})}).catch(()=>null);
+  if(r&&r.ok){msg.textContent="";$("#pw").value="";load()}else msg.textContent=r&&r.status===401?"That password isn't right.":"Couldn't reach the site. Try again."});
+$("#logout").addEventListener("click",async()=>{await fetch("/api/logout",{method:"POST"}).catch(()=>{});role=null;E=[];showLogin()});
+$("#aDate").value=todayISO();
+$("#addForm").addEventListener("submit",async e=>{e.preventDefault();const btn=$("#aBtn");btn.disabled=true;
+  const entry={date:$("#aDate").value,kind:$("#aKind").value,amount:+$("#aAmt").value,note:$("#aNote").value.trim()};
+  try{await send({action:"add",entry});$("#aAmt").value="";$("#aNote").value="";$("#aKind").value="payment";
+    setStatus(`Added ${entry.kind==="credit"?"a bonus credit":"a payment"} of ${money(entry.amount)} on ${dLabel(entry.date)}.`);await load()}
+  catch(err){setStatus(err.message,true)}finally{btn.disabled=false}});
+document.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.id==="showAll"){showAll=!showAll;render();return}
+  if(b.dataset.edit){editId=+b.dataset.edit;confirmDel=null;render();$("#eAmt")?.focus();return}
+  if(b.dataset.cancel){editId=null;confirmDel=null;render();return}
+  if(b.dataset.del){confirmDel=+b.dataset.del;render();return}
+  if(b.dataset.delno){confirmDel=null;render();return}
+  if(b.dataset.delyes){b.disabled=true;try{await send({action:"delete",id:+b.dataset.delyes});editId=null;confirmDel=null;setStatus("Deleted.");await load()}catch(err){setStatus(err.message,true);b.disabled=false}return}
+  if(b.dataset.save){b.disabled=true;const entry={date:$("#eDate").value,kind:$("#eKind").value,amount:+$("#eAmt").value,note:$("#eNote").value.trim()};
+    try{await send({action:"update",id:+b.dataset.save,entry});editId=null;setStatus("Saved.");await load()}catch(err){setStatus(err.message,true);b.disabled=false}return}
+  if(b.id==="addBonus"){const B=bonusState();if(!B.earned)return;b.disabled=true;
+    const date=todayISO()>=B.earned.due+"-01"?todayISO():B.earned.due+"-01";
+    try{await send({action:"add",entry:{date,kind:"credit",amount:B.earned.amount,note:`Bonus credit: 12 months (${mShort(B.earned.run[0].k)} to ${mShort(B.earned.run[11].k)})`}});
+      setStatus(`Added the ${money(B.earned.amount)} bonus credit.`);await load()}catch(err){setStatus(err.message,true);b.disabled=false}return}
+});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&role&&editId===null)load()});
+load();
+})();
+</script>
+</body>
+</html>

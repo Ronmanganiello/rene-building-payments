@@ -1,0 +1,8 @@
+{
+  "name": "rene-building-payments",
+  "private": true,
+  "type": "module",
+  "description": "Rene's payments on the Cafe Building, with the 12-month bonus credit",
+  "dependencies": { "@neondatabase/serverless": "0.10.4" },
+  "engines": { "node": ">=20" }
+}
