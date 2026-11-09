@@ -6,6 +6,13 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#4F6655">
 <title>Cafe Building Payments</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cafe Building">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -110,12 +117,36 @@ tr.credit td.amt{color:var(--marigold)}
 td.note{font-size:.88rem;color:var(--muted);max-width:260px}
 tr.editing td{background:var(--soft)}
 tr.editing input,tr.editing select{width:100%}
+.install{border:2px solid var(--cantera)}
+.install ol{margin:6px 0 0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px}
+.install .os{display:flex;gap:6px;margin:10px 0 4px}
+.install .os button[aria-pressed=true]{background:var(--cantera);border-color:var(--cantera);color:var(--cantera-ink)}
+.kbd{display:inline-block;border:1px solid var(--line);background:var(--soft);border-radius:6px;padding:0 6px;font-weight:600;white-space:nowrap}
 .login{max-width:440px;margin:12vh auto 0;display:flex;flex-direction:column;gap:12px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
 <div class="wrap">
+  <section class="panel install" id="installPanel" hidden>
+    <div class="row spread"><h2>Add this app to your phone</h2><button class="link" id="installClose">Close</button></div>
+    <p class="muted" style="margin:6px 0 0">It gets its own icon on your home screen and opens full screen, like any other app.</p>
+    <div id="installNow" hidden style="margin-top:10px"><button class="primary" id="installBtn">Install the app</button></div>
+    <div class="os" role="group" aria-label="Phone type"><button data-os="ios" aria-pressed="false">iPhone</button><button data-os="android" aria-pressed="false">Android</button></div>
+    <ol id="osIos">
+      <li>Open this page in <b>Safari</b>.</li>
+      <li>Tap the <b>Share</b> button <span class="kbd">⬆︎</span> (the square with an arrow). On newer iPhones, tap <span class="kbd">⋯</span> first, then <b>Share</b>.</li>
+      <li>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</li>
+      <li>Open <b>Cafe Building</b> from your home screen and sign in once. It stays signed in after that.</li>
+    </ol>
+    <ol id="osAndroid" hidden>
+      <li>Open this page in <b>Chrome</b>.</li>
+      <li>Tap the menu <span class="kbd">⋮</span> at the top right.</li>
+      <li>Tap <b>Add to home screen</b> (or <b>Install app</b>), then <b>Install</b>.</li>
+      <li>Open <b>Cafe Building</b> from your home screen. If it asks, sign in once.</li>
+    </ol>
+  </section>
+
   <section class="panel login" id="loginPanel" hidden>
     <h1>Cafe Building Payments</h1>
     <p class="muted" style="margin:0">Enter your password. Ron and Ellen use the editing password; Rene uses the viewing password.</p>
@@ -125,6 +156,7 @@ tr.editing input,tr.editing select{width:100%}
       <button class="primary" type="submit">Sign in</button>
     </form>
     <div id="loginMsg" class="muted" role="status" style="min-height:1.4em"></div>
+    <button class="link installLink" style="align-self:flex-start">Add this app to your phone</button>
   </section>
 
   <div id="app" hidden style="display:contents">
@@ -133,7 +165,7 @@ tr.editing input,tr.editing select{width:100%}
         <h1 id="title">Cafe Building · Rene's payments</h1>
         <div class="sub" id="subtitle">Sold to Rene at 0% interest · amounts in Mexican pesos</div>
       </div>
-      <div class="row"><span id="rolePill"></span><button class="link" id="logout">Sign out</button></div>
+      <div class="row"><span id="rolePill"></span><button class="link installLink">Add to your phone</button><button class="link" id="logout">Sign out</button></div>
     </header>
 
     <div id="status" hidden></div>
@@ -318,6 +350,18 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
     try{await send({action:"add",entry:{date,kind:"credit",amount:B.earned.amount,note:`Bonus credit: 12 months (${mShort(B.earned.run[0].k)} to ${mShort(B.earned.run[11].k)})`}});
       setStatus(`Added the ${money(B.earned.amount)} bonus credit.`);await load()}catch(err){setStatus(err.message,true);b.disabled=false}return}
 });
+/* ---------- add to phone ---------- */
+const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+if(standalone)document.querySelectorAll(".installLink").forEach(b=>b.hidden=true);
+let installEvt=null;
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEvt=e;$("#installNow").hidden=false});
+function pickOs(os){document.querySelectorAll(".install .os button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.os===os));$("#osIos").hidden=os!=="ios";$("#osAndroid").hidden=os!=="android"}
+pickOs(/android/i.test(navigator.userAgent)?"android":"ios");
+document.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.classList.contains("installLink")){$("#installPanel").hidden=false;$("#installPanel").scrollIntoView({behavior:"smooth",block:"start"})}
+  else if(b.id==="installClose")$("#installPanel").hidden=true;
+  else if(b.dataset.os)pickOs(b.dataset.os);
+  else if(b.id==="installBtn"&&installEvt){installEvt.prompt();const r=await installEvt.userChoice.catch(()=>null);installEvt=null;$("#installNow").hidden=true;if(r&&r.outcome==="accepted")$("#installPanel").hidden=true}});
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&role&&editId===null)load()});
 load();
 })();
